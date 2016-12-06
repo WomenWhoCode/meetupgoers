@@ -1,6 +1,11 @@
 {
 	"ImportPath": "github.com/WomenWhoCode/meetupgoers",
 	"GoVersion": "go1.7",
-	"GodepVersion": "v74",
-	"Deps": []
+	"GodepVersion": "v75",
+	"Deps": [
+		{
+			"ImportPath": "github.com/juju/ratelimit",
+			"Rev": "77ed1c8a01217656d2080ad51981f6e99adaa177"
+		}
+	]
 }

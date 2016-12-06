@@ -1,4 +1,4 @@
-package main
+package nomain
 
 import (
   "fmt"
@@ -8,7 +8,7 @@ import (
 
 func main() {
   http.HandleFunc("/", root)
-  http.ListenAndServe(GetPort(), nil)	
+  http.ListenAndServe(GetPort(), nil)
 }
 
 // Get the Port from the environment so we can run on Heroku
