@@ -1,16 +1,17 @@
 package mongodb
 
 import (
+	"os"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
 )
 
 const (
-	MongoDBHosts = "ds033036.mlab.com:33036"
-	AuthDatabase = "heroku_vb4zpgmk"
-	AuthUserName = ""
-	AuthPassword = ""
+	MongoDBHosts = os.Getenv("DBHost")
+	AuthDatabase = os.Getenv("DBName")
+	AuthUserName = os.Getenv("DBUserName")
+	AuthPassword = os.Getenv("DBPassword")
 )
 
 func ConnDB() *mgo.Session {
@@ -31,8 +32,3 @@ func ConnDB() *mgo.Session {
 	}
 	return session
 }
-
-//err = c.Find(bson.M{"name": "Ale"}).Select(bson.M{"phone": 0}).One(&result)
-//if err != nil {
-//	panic(err)
-//}

@@ -1,17 +1,16 @@
-package nomain
+package main
 
 import (
 	"fmt"
 	"net/http"
 	"os"
-	
-	"github.com/WomenWhoCode/meetupgoers/mongodb"
 
+	"github.com/WomenWhoCode/meetupgoers/mongodb"
 )
 
 func main() {
-  http.HandleFunc("/", root)
-  http.ListenAndServe(GetPort(), nil)
+	http.HandleFunc("/", root)
+	http.ListenAndServe(GetPort(), nil)
 }
 
 // GetPort from the environment so we can run on Heroku
