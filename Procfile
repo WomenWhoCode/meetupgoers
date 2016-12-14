@@ -1,1 +1,1 @@
-web: meetupgoers
+web: meetupapi

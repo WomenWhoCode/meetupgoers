@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	AuthDatabase     = os.Getenv("DBName")
 	DefaultWaterMark = "0"
 )
 
@@ -35,6 +34,7 @@ type WaterMark struct {
 }
 
 var firstID string = "0"
+var AuthDatabase string = os.Getenv("DBName")
 
 func main() {
 	// resp, err := http.Get("https://api.meetup.com/Women-Who-Code-SF/events?order=created&desc=1&status=past&page=5")

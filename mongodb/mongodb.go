@@ -7,20 +7,13 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
-const (
-	MongoDBHosts = os.Getenv("DBHost")
-	AuthDatabase = os.Getenv("DBName")
-	AuthUserName = os.Getenv("DBUserName")
-	AuthPassword = os.Getenv("DBPassword")
-)
-
 func ConnDB() *mgo.Session {
 	mongoDBDialInfo := &mgo.DialInfo{
-		Addrs:    []string{MongoDBHosts},
+		Addrs:    []string{os.Getenv("DBHost")},
 		Timeout:  600 * time.Second,
-		Database: AuthDatabase,
-		Username: AuthUserName,
-		Password: AuthPassword,
+		Database: os.Getenv("DBName"),
+		Username: os.Getenv("DBUserName"),
+		Password: os.Getenv("DBPassword"),
 	}
 
 	// Create a session which maintains a pool of socket connections
