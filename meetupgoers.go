@@ -9,8 +9,12 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", root)
-	http.ListenAndServe(GetPort(), nil)
+	if len(os.Args) >= 2 && os.Args[1] == "scheduler" {
+		crawler.StartTheEngine()
+	} else {
+		http.HandleFunc("/", root)
+		http.ListenAndServe(GetPort(), nil)
+	}
 }
 
 // GetPort from the environment so we can run on Heroku

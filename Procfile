@@ -1,2 +1,1 @@
 web: meetupgoers
-worker: crawler

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 
 const (
 	DefaultWaterMark = "0"
+	AuthDatabase     = "heroku_vb4zpgmk"
 )
 
 type Event struct {
@@ -34,15 +34,12 @@ type WaterMark struct {
 }
 
 var firstID string = "0"
-var AuthDatabase string = os.Getenv("DBName")
-
-func main() {
-	StartTheEngine()
-}
 
 func StartTheEngine() string {
 	// resp, err := http.Get("https://api.meetup.com/Women-Who-Code-SF/events?order=created&desc=1&status=past&page=5")
+	fmt.Printf("Start crawling\n")
 	waterMark := findWaterMark()
+	fmt.Printf("WaterMark found: %s\n", waterMark)
 	StoreEvents(waterMark)
 	return "success"
 }
@@ -99,12 +96,13 @@ func Events(apiUrl string, waterMark string) string {
 		linkTrimmed := strings.TrimSuffix(link, "/")
 		//parse the link to get the id as the last part of the url
 		id := linkTrimmed[strings.LastIndex(linkTrimmed, "/")+1:]
-		if id == waterMark {
-			// reach checkpoint
-			return ""
-		}
 		if firstID == "0" {
 			firstID = id
+		}
+		if id == waterMark {
+			// reach checkpoint
+			fmt.Printf("Encouter the same event: %s\n", waterMark)
+			return ""
 		}
 		err = c.Insert(&Event{tEvent["name"].(string), id, link})
 		if err != nil {
