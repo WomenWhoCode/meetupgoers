@@ -1,4 +1,4 @@
-package main
+package crawler
 
 import (
 	"encoding/json"
@@ -37,9 +37,14 @@ var firstID string = "0"
 var AuthDatabase string = os.Getenv("DBName")
 
 func main() {
+	StartTheEngine()
+}
+
+func StartTheEngine() string {
 	// resp, err := http.Get("https://api.meetup.com/Women-Who-Code-SF/events?order=created&desc=1&status=past&page=5")
 	waterMark := findWaterMark()
 	StoreEvents(waterMark)
+	return "success"
 }
 
 func findWaterMark() string {

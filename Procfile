@@ -1,1 +1,2 @@
-web: meetupapi
+web: meetupgoers
+worker: crawler
