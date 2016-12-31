@@ -22,15 +22,15 @@ const (
 )
 
 type Event struct {
-	id   string
-	name string
-	url  string
+	ID   string
+	NAME string
+	URL  string
 }
 
 type WaterMark struct {
 	Name      string
 	ID        string
-	timeStamp time.Time
+	TIMESTAMP time.Time
 }
 
 var firstID string = "0"
@@ -104,7 +104,7 @@ func Events(apiUrl string, waterMark string) string {
 			fmt.Printf("Encouter the same event: %s\n", waterMark)
 			return ""
 		}
-		err = c.Insert(&Event{id: id, name: tEvent["name"].(string), url: link})
+		err = c.Insert(&Event{ID: id, NAME: tEvent["name"].(string), URL: link})
 		if err != nil {
 			log.Fatal(err)
 		}
