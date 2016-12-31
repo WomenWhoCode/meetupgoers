@@ -30,7 +30,7 @@ func setUp() {
 
 func ConnDB() *mgo.Session {
 	setUp()
-	mongoDBDialInfo := &mgo.DialInfo{
+	dBDialInfo := &mgo.DialInfo{
 		Addrs:    []string{dbHost},
 		Timeout:  600 * time.Second,
 		Database: dbName,
@@ -40,7 +40,7 @@ func ConnDB() *mgo.Session {
 
 	// Create a session which maintains a pool of socket connections
 	// to our MongoDB.
-	session, err := mgo.DialWithInfo(mongoDBDialInfo)
+	session, err := mgo.DialWithInfo(dBDialInfo)
 
 	if err != nil {
 		panic(err)

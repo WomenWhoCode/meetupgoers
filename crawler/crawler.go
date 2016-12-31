@@ -104,7 +104,7 @@ func Events(apiUrl string, waterMark string) string {
 			fmt.Printf("Encouter the same event: %s\n", waterMark)
 			return ""
 		}
-		err = c.Insert(&Event{tEvent["name"].(string), id, link})
+		err = c.Insert(&Event{id: id, name: tEvent["name"].(string), url: link})
 		if err != nil {
 			log.Fatal(err)
 		}
