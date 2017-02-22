@@ -3,11 +3,16 @@ package crawler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+
+	"github.com/WomenWhoCode/meetupgoers/mongodb"
+	mgo "gopkg.in/mgo.v2"
 )
 
 type Answer struct {
+	ID          string
 	EVENT_ID    string
 	QUESTION_ID string
 	ANSWER      string
@@ -33,10 +38,10 @@ func (rsvpResp *RsvpResponse) ParseResponse(resp *http.Response) error {
 
 var apikey string = os.Getenv("MEETUP_API_KEY")
 
-func GetAnswers(event_id string) string {
+func GetAnswers(eventId string) string {
 	fmt.Printf("get rsvp\n")
 	//generate api url
-	apiUrl := fmt.Sprintf("https://api.meetup.com/women-who-code-sf/events/%s/rsvps?key=%s", event_id, apikey)
+	apiUrl := fmt.Sprintf("https://api.meetup.com/women-who-code-sf/events/%s/rsvps?fields=answers&key=%s", eventId, apikey)
 	fmt.Printf(apiUrl)
 	//make a new api object
 	api := NewRateLimitedAPI(apiUrl)
@@ -44,32 +49,42 @@ func GetAnswers(event_id string) string {
 	//Call the api. If this api was paginated, use a for loop
 	//for rsvpResponse.nextPageUrl != ''
 	api.CallAPI(&rsvpResponse)
+
+	session := mongodb.ConnDB()
+	session.SetMode(mgo.Monotonic, true)
+	c := session.DB(AuthDatabase).C("answersCollection")
+
 	for _, rsvp := range rsvpResponse.rsvplist {
 		tRsvp := rsvp.(map[string]interface{})
 		groupId := string(tRsvp["group"].(map[string]interface{})["id"].(json.Number))
 		memberId := string(tRsvp["member"].(map[string]interface{})["id"].(json.Number))
 		fmt.Printf("%s\n", memberId)
 		if tRsvp["answers"] == nil {
-            fmt.Printf("No answer in rsvp")
+			fmt.Printf("No answer in rsvp")
 			continue
 		}
 		tAnswers := tRsvp["answers"].([]interface{})
 		for _, ans := range tAnswers {
-			tAns := ans.(map[string]string)
-			fmt.Printf("Got an answer")
-			ansText := tAns["answer"]
-			question := tAns["question"]
-			question_id := tAns["question_id"]
+			tAns := ans.(map[string]interface{})
+			ansText := tAns["answer"].(string)
+			question := tAns["question"].(string)
+			questionId := string(tAns["question_id"].(json.Number))
+            //TODO sanity check for not null
+			generatedAnsId := eventId + "|" + memberId + "|" + questionId
 			a := Answer{
-				EVENT_ID:    "blah",
-				QUESTION_ID: question_id,
+				ID:          generatedAnsId,
+				EVENT_ID:    eventId,
+				QUESTION_ID: questionId,
 				QUESTION:    question,
 				ANSWER:      ansText,
 				MEMBER_ID:   memberId,
 				GROUP_ID:    groupId,
 			}
-			fmt.Printf("%s", a)
-			//TODO store this in mongo
+			err := c.Insert(&a)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 		}
 	}
 	return "success"
