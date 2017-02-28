@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
 	"github.com/WomenWhoCode/meetupgoers/crawler"
 )
 
 func main() {
 	if len(os.Args) >= 2 && os.Args[1] == "scheduler" {
 		crawler.StartTheEngine()
+	} else if len(os.Args) >= 2 && os.Args[1] == "rsvp_test" {
+		event_id := "slmrkmywdbcc"
+		crawler.GetAnswers(event_id)
 	} else {
 		http.HandleFunc("/", root)
 		http.ListenAndServe(GetPort(), nil)
