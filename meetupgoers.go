@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if len(os.Args) >= 2 && os.Args[1] == "scheduler" {
-		//crawler.StartTheEngine()
+		crawler.StartTheEngine()
 		crawler.StartTheGroupEngine()
 	} else if len(os.Args) >= 2 && os.Args[1] == "rsvp_test" {
 		event_id := "slmrkmywdbcc"
