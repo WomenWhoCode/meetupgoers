@@ -3,9 +3,10 @@ package mongodb
 import (
 	"log"
 	"time"
-	"os"
 
 	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"os"
 )
 
 var (
@@ -46,4 +47,16 @@ func ConnDB() *mgo.Session {
 		panic(err)
 	}
 	return session
+}
+
+func RenameCollection(src string, dst string, session *mgo.Session) {
+	var dat interface{}
+	err := session.DB(dbName).C(dst).DropCollection()
+	if err != nil {
+		println(err)
+	}
+	err = session.Run(bson.D{{"renameCollection", dbName+"."+src}, {"to", dbName+"."+dst}}, dat)
+	if err != nil {
+		panic(err)
+	}
 }
