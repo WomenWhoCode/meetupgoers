@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/juju/ratelimit"
-
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
@@ -27,10 +25,16 @@ type Event struct {
 	URL  string
 }
 
+type EventResponse struct {
+	eventlist    []interface{}
+	nextPageUrl string
+}
+
 type WaterMark struct {
 	Name      string
 	ID        string
 	TIMESTAMP time.Time
+	GROUPNAME string
 }
 
 var firstID string = "0"
@@ -38,58 +42,58 @@ var firstID string = "0"
 func StartTheEngine() string {
 	// resp, err := http.Get("https://api.meetup.com/Women-Who-Code-SF/events?order=created&desc=1&status=past&page=5")
 	fmt.Printf("Start crawling\n")
-	waterMark := findWaterMark()
-	fmt.Printf("WaterMark found: %s\n", waterMark)
-	StoreEvents(waterMark)
+	StoreEvents()
 	return "success"
 }
 
-func findWaterMark() string {
+func findWaterMark(groupName string) string {
 	session := mongodb.ConnDB()
+	collectionName := fmt.Sprintf("waterMark")
 	var result WaterMark
-	err := session.DB(AuthDatabase).C("waterMark").Find(bson.M{}).One(&result)
+	err := session.DB(AuthDatabase).C(collectionName).Find(bson.M{"groupname": groupName}).One(&result)
 	if err != nil {
-		session.DB(AuthDatabase).C("waterMark").Insert(&WaterMark{"event", DefaultWaterMark, time.Now()})
+		session.DB(AuthDatabase).C(collectionName).Insert(&WaterMark{
+			"event", DefaultWaterMark,
+			time.Now(), groupName})
 		return DefaultWaterMark
 	}
+	print(result.ID)
 	return result.ID
 }
 
-func updateWaterMark(ID string) {
+func updateWaterMark(ID string, groupName string) {
 	session := mongodb.ConnDB()
-	change := bson.M{"$set": bson.M{"id": ID, "timestamp": time.Now()}}
-	err := session.DB(AuthDatabase).C("waterMark").Update(bson.M{"name": "event"}, change)
+	change := bson.M{"$set": bson.M{"id": ID, "timestamp": time.Now(), "groupname": groupName}}
+	collectionName := fmt.Sprintf("waterMark")
+	err := session.DB(AuthDatabase).C(collectionName).Update(bson.M{"name": "event", "groupname": groupName}, change)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func Events(apiUrl string, waterMark string) string {
-	//apikey should go here
-	const apikey string = "blah"
-
-	resp, err := http.Get(apiUrl)
-	if err != nil {
-		// handle error
-	}
-	defer resp.Body.Close()
-
-	// sanitize trim the angle brackets from left and right
-	next := extractLink(resp.Header.Get("Link"))
-	// next := strings.TrimLeft(resp.Header.Get("Link"), "<")
-	// next = next[0: strings.LastIndex(next, ">")]
-
-	// decode json
+func (eventResp *EventResponse) ParseResponse(resp *http.Response) error {
 	var dat interface{}
-	json.NewDecoder(resp.Body).Decode(&dat)
+	err := json.NewDecoder(resp.Body).Decode(&dat)
+	eventResp.eventlist = dat.([]interface{})
+	link := resp.Header.Get("Link")
+	if strings.Contains(link, "prev") || len(link) == 0 {
+		eventResp.nextPageUrl = ""
+	} else {
+		eventResp.nextPageUrl = extractLink(link)
+	}
+	return err
+}
 
-	// array of events
-	events := dat.([]interface{})
+func Events(apiUrl string, waterMark string) string {
+	api := NewRateLimitedAPI(apiUrl)
+	eventResponse := EventResponse{}
+	api.CallAPI(&eventResponse)
+
 	session := mongodb.ConnDB()
 	session.SetMode(mgo.Monotonic, true)
 
 	c := session.DB(AuthDatabase).C("eventCollection")
-	for _, event := range events {
+	for _, event := range eventResponse.eventlist {
 		//for each event
 		tEvent := event.(map[string]interface{})
 		link := tEvent["link"].(string)
@@ -104,13 +108,13 @@ func Events(apiUrl string, waterMark string) string {
 			fmt.Printf("Encouter the same event: %s\n", waterMark)
 			return ""
 		}
-		err = c.Insert(&Event{ID: id, NAME: tEvent["name"].(string), URL: link})
+		err := c.Insert(&Event{ID: id, NAME: tEvent["name"].(string), URL: link})
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	return next
+	return eventResponse.nextPageUrl
 }
 
 func extractLink(link string) string {
@@ -119,23 +123,35 @@ func extractLink(link string) string {
 	return next
 }
 
-func StoreEvents(lastWatermark string) {
-	// for next := Events(page); next != ""; {
-
-	// }
+func StoreEventsByGroup(lastWatermark string, groupName string) {
 	const page int = 10
-	apiUrl := fmt.Sprintf("https://api.meetup.com/Women-Who-Code-SF/events?order=created&desc=1&status=past&page=%d)", page)
-	// rate limit to 30 requests per second
-	limiter := ratelimit.NewBucketWithRate(30, 30)
+	apiUrl := fmt.Sprintf("https://api.meetup.com/%s/events?order=created&desc=1&status=past&page=%d)", groupName, page)
 	for next := Events(apiUrl, lastWatermark); next != ""; {
 		fmt.Printf("======NEXT URL : %s ======\n", next)
 		next = Events(next, lastWatermark)
 		if strings.Contains(next, "before") {
 			break
 		}
-		limiter.Wait(1)
 	}
 	if firstID != "0" {
-		updateWaterMark(firstID)
+		updateWaterMark(firstID, groupName)
 	}
+}
+
+func StoreEvents() {
+	session := mongodb.ConnDB()
+	session.SetMode(mgo.Monotonic, true)
+
+	var groups []Group
+	err := session.DB(AuthDatabase).C("groupCollection").Find(nil).All(&groups)
+	if err != nil {
+		panic(err)
+	}
+	// Iterate each group to get events
+	for _, group := range groups {
+		waterMark := findWaterMark(group.URLNAME)
+		fmt.Printf("WaterMark found: %s for %s\n", waterMark, group.URLNAME)
+		StoreEventsByGroup(waterMark, group.URLNAME)
+	}
+
 }
